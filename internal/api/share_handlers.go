@@ -32,6 +32,11 @@ func CreateShare(c *gin.Context) {
 		MaxAccess int        `json:"max_access"`
 	}
 
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
 	if input.MaxAccess < 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Max access cannot be negative"})
 		return
@@ -224,7 +229,15 @@ func DownloadShare(c *gin.Context) {
 		return
 	}
 
-	// Set MIME type based on extension to prevent browser misidentification (e.g. APK as ZIP)
+	f, err := os.Open(fullPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer f.Close()
+	fInfo, _ := f.Stat()
+
+	// Set headers only after confirming the file is valid
 	ext := filepath.Ext(fullPath)
 	contentType := mime.TypeByExtension(ext)
 	if contentType == "" {
@@ -244,13 +257,6 @@ func DownloadShare(c *gin.Context) {
 	}
 	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"; filename*=UTF-8''%s", disposition, filename, encodedName))
 
-	f, err := os.Open(fullPath)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
-		return
-	}
-	defer f.Close()
-	fInfo, _ := f.Stat()
 	http.ServeContent(c.Writer, c.Request, filename, fInfo.ModTime(), f)
 }
 

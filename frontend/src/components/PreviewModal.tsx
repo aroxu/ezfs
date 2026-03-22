@@ -11,29 +11,30 @@ interface PreviewModalProps {
     name: string;
     path: string;
   } | null;
-  baseRawUrl?: string; // e.g. "" (public root) or "/api/admin/files/raw"
+  baseRawUrl?: string; // e.g. "" (public root) or "/api/private/files/raw"
+  rawUrlBuilder?: (path: string) => string;
 }
 
-const PreviewModal = ({ isOpen, onOpenChange, file, baseRawUrl = "" }: PreviewModalProps) => {
+const PreviewModal = ({ isOpen, onOpenChange, file, baseRawUrl = "", rawUrlBuilder }: PreviewModalProps) => {
   const [mdContent, setMdContent] = useState("");
 
   useEffect(() => {
     if (!file) return;
     const extension = file.name.split(".").pop()?.toLowerCase();
     const isMarkdown = extension === "md";
-    const rawUrl = baseRawUrl + "/" + file.path;
+    const rawUrl = rawUrlBuilder ? rawUrlBuilder(file.path) : baseRawUrl + "/" + file.path;
 
     if (isMarkdown && isOpen) {
       fetch(rawUrl)
         .then((res) => res.text())
         .then((text) => setMdContent(text));
     }
-  }, [file, isOpen, baseRawUrl]);
+  }, [file, isOpen, baseRawUrl, rawUrlBuilder]);
 
   if (!file) return null;
 
   const extension = file.name.split(".").pop()?.toLowerCase();
-  const rawUrl = baseRawUrl + "/" + file.path;
+  const rawUrl = rawUrlBuilder ? rawUrlBuilder(file.path) : baseRawUrl + "/" + file.path;
 
   const isImage = ["png", "jpg", "jpeg", "gif", "webp", "svg"].includes(extension || "");
   const isVideo = ["mp4", "webm", "ogg"].includes(extension || "");
@@ -89,7 +90,7 @@ const PreviewModal = ({ isOpen, onOpenChange, file, baseRawUrl = "" }: PreviewMo
                   </div>
                 )}
                 {(isPdf || isHtml) && (
-                  <iframe src={rawUrl} className="w-full h-full rounded-xl border border-divider shadow-lg bg-white" />
+                  <iframe src={`${rawUrl}${rawUrl.includes("?") ? "&" : "?"}inline=1`} className="w-full h-full rounded-xl border border-divider shadow-lg bg-white" />
                 )}
                 {!isImage && !isVideo && !isMarkdown && !isPdf && !isHtml && (
                   <div className="flex flex-col items-center justify-center py-20 text-default-400">

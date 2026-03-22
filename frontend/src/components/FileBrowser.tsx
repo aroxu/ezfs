@@ -1,4 +1,5 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Table,
   TableHeader,
@@ -25,7 +26,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
 const FileBrowser = () => {
-  const [path, setPath] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const path = location.pathname === "/" ? "" : location.pathname.replace(/^\//, "");
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [zipStatus, setZipStatus] = useState<{ active: boolean; progress: number; fileName: string }>({
@@ -105,9 +108,9 @@ const FileBrowser = () => {
     loadFiles(path);
   }, [path]);
 
-  const handleNavigate = (newPath: string) => {
-    setPath(newPath);
-  };
+  const handleNavigate = useCallback((newPath: string) => {
+    navigate(newPath ? `/${newPath}` : "/");
+  }, [navigate]);
 
   const breadcrumbs = path.split("/").filter(Boolean);
 
@@ -123,12 +126,15 @@ const FileBrowser = () => {
     <div className="flex flex-col gap-6">
       <PreviewModal isOpen={isOpen} onOpenChange={onOpenChange} file={selectedFile} />
 
-      <Card className="bg-background/60 shadow-medium" isBlurred>
-        <CardBody className="py-3 px-5">
+      <Card className="bg-background/60 border border-divider shadow-sm overflow-hidden" isBlurred>
+        <CardBody className="py-3 px-5 overflow-x-auto">
           <Breadcrumbs
+            maxItems={4}
+            itemsBeforeCollapse={1}
+            itemsAfterCollapse={2}
             separator={<ChevronRight size={14} />}
             itemClasses={{
-              item: "text-small font-medium data-[current=true]:text-primary",
+              item: "text-small font-medium data-[current=true]:text-primary whitespace-nowrap",
               separator: "text-default-400",
             }}
           >
@@ -145,8 +151,9 @@ const FileBrowser = () => {
       <Table
         aria-label="File list"
         removeWrapper
-        className="bg-background/40"
+        className="bg-background/40 w-full"
         classNames={{
+          table: "table-fixed w-full",
           th: "bg-transparent text-default-500 border-b border-divider",
           tr: "hover:bg-default-100/50 transition-colors group",
           td: "py-4",
@@ -154,7 +161,7 @@ const FileBrowser = () => {
       >
         <TableHeader>
           <TableColumn>NAME</TableColumn>
-          <TableColumn width={150}>SIZE</TableColumn>
+          <TableColumn width={150} className="hidden sm:table-cell">SIZE</TableColumn>
           <TableColumn align="end" width={100}>
             ACTIONS
           </TableColumn>
@@ -163,40 +170,43 @@ const FileBrowser = () => {
           {(files || []).map((file) => (
             <TableRow key={file.path}>
               <TableCell>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <div
-                    className={`p-2 rounded-lg ${file.is_dir ? "bg-primary/10 text-primary" : "bg-default-100 text-default-600"}`}
+                    className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${file.is_dir ? "bg-primary/10 text-primary" : "bg-default-100 text-default-600"}`}
                   >
-                    {file.is_dir ? <Folder size={20} /> : <File size={20} />}
+                    {file.is_dir ? <Folder size={18} className="sm:w-5 sm:h-5" /> : <File size={18} className="sm:w-5 sm:h-5" />}
                   </div>
-                  {file.is_dir ? (
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    {file.is_dir ? (
                       <Link
-                        className="cursor-pointer font-medium text-foreground hover:text-primary transition-colors"
+                        className="cursor-pointer font-medium text-foreground hover:text-primary transition-colors text-sm sm:text-base truncate block"
                         onClick={() => handleNavigate(file.path)}
                       >
                         {file.name}
                       </Link>
+                    ) : file.name.match(/\.html?$/) ? (
+                      <a
+                        href={`/${file.path}`}
+                        className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer text-sm sm:text-base truncate block"
+                      >
+                        {file.name}
+                      </a>
+                    ) : (
+                      <a
+                        href={`/${file.path}`}
+                        download
+                        className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer text-sm sm:text-base truncate block"
+                      >
+                        {file.name}
+                      </a>
+                    )}
+                    <div className="sm:hidden text-tiny text-default-400 truncate">
+                      {file.is_dir ? "Folder" : formatSize(file.size)}
                     </div>
-                  ) : file.name.match(/\.html?$/) ? (
-                    <a
-                      href={`/${file.path}`}
-                      className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
-                    >
-                      {file.name}
-                    </a>
-                  ) : (
-                    <a
-                      href={`/${file.path}`}
-                      download
-                      className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
-                    >
-                      {file.name}
-                    </a>
-                  )}
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden sm:table-cell">
                 {file.is_dir ? (
                   <Chip size="sm" variant="flat">
                     Folder

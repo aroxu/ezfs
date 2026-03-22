@@ -1,19 +1,21 @@
 ﻿import { useState, useEffect } from "react";
-import { Card, CardBody, CardHeader, Input, Button, Divider } from "@heroui/react";
+import { Card, CardBody, CardHeader, Input, Button, Divider, Spinner } from "@heroui/react";
 import { login } from "../utils/api";
 import axios from "../utils/api";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Lock, User, LogIn, AlertCircle } from "lucide-react";
 import { AxiosError } from "axios";
+import Dashboard from "./Dashboard";
 
 const Admin = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [lockUntil, setLockUntil] = useState<number | null>(null);
   const [countDown, setCountDown] = useState<number | null>(null);
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get("redirect");
 
@@ -57,22 +59,22 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    document.title = "ezfs - Admin Login";
-    // Check if already logged in by pinging status
     const checkAuth = async () => {
       try {
-        await axios.get("/admin/status");
+        await axios.get("/private/status");
         if (redirectTo) {
           window.location.href = redirectTo;
-        } else {
-          navigate("/admin/dashboard");
+          return;
         }
+        setIsAuthenticated(true);
       } catch {
         // Not logged in, stay here
+      } finally {
+        setIsCheckingAuth(false);
       }
     };
     checkAuth();
-  }, [navigate]);
+  }, []);
 
   const handleLogin = async () => {
     setError("");
@@ -84,7 +86,7 @@ const Admin = () => {
       if (redirectTo) {
         window.location.href = redirectTo;
       } else {
-        navigate("/admin/dashboard");
+        setIsAuthenticated(true);
       }
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; lock_until?: number }>;
@@ -99,6 +101,21 @@ const Admin = () => {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    document.title = "ezfs - Private";
+    return <Dashboard />;
+  }
+
+  document.title = "ezfs - Admin Login";
 
   return (
     <div className="flex justify-center items-center h-[70vh]">

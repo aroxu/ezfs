@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Card,
   CardBody,
@@ -19,9 +19,11 @@ import {
   BreadcrumbItem,
   Tooltip,
   Chip,
+  useDisclosure,
 } from "@heroui/react";
 import {
   Download,
+  Eye,
   File as FileIcon,
   Lock,
   ShieldCheck,
@@ -33,6 +35,7 @@ import {
 import axios, { AxiosError } from "axios";
 import JSZip from "jszip";
 import { motion, AnimatePresence } from "framer-motion";
+import PreviewModal from "../components/PreviewModal";
 
 interface ShareInfo {
   id: string;
@@ -56,11 +59,19 @@ const ShareView = () => {
   const [info, setInfo] = useState<ShareInfo | null>(null);
   const [password, setPassword] = useState("");
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [currentPath, setCurrentPath] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const basePath = `/s/${id}`;
+  const currentPath = location.pathname.startsWith(basePath + "/")
+    ? location.pathname.slice(basePath.length + 1)
+    : "";
+  const setCurrentPath = (newPath: string) => navigate(newPath ? `${basePath}/${newPath}` : basePath);
   const [contents, setContents] = useState<ShareFileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [listLoading, setListLoading] = useState(false);
   const [error, setError] = useState("");
+  const [previewFile, setPreviewFile] = useState<ShareFileItem | null>(null);
+  const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onOpenChange: onPreviewOpenChange } = useDisclosure();
   const [zipStatus, setZipStatus] = useState<{ active: boolean; progress: number; fileName: string }>({
     active: false,
     progress: 0,
@@ -405,17 +416,32 @@ const ShareView = () => {
                     </TableCell>
                     <TableCell>
                       {!item.isDir && (
-                        <Tooltip content="Download">
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="flat"
-                            color="success"
-                            onClick={() => handleDownload(item.path)}
-                          >
-                            <Download size={18} />
-                          </Button>
-                        </Tooltip>
+                        <div className="flex items-center gap-1">
+                          <Tooltip content="Preview">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              onPress={() => {
+                                setPreviewFile(item);
+                                onPreviewOpen();
+                              }}
+                            >
+                              <Eye size={18} />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content="Download">
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              color="success"
+                              onClick={() => handleDownload(item.path)}
+                            >
+                              <Download size={18} />
+                            </Button>
+                          </Tooltip>
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -425,6 +451,15 @@ const ShareView = () => {
           </div>
         </div>
       )}
+
+      <PreviewModal
+        isOpen={isPreviewOpen}
+        onOpenChange={onPreviewOpenChange}
+        file={previewFile}
+        rawUrlBuilder={(path) =>
+          `/api/shares/${id}/download?p=${encodeURIComponent(password)}&path=${encodeURIComponent(path)}&inline=1`
+        }
+      />
 
       {/* Zip Progress Indicator */}
       <AnimatePresence>

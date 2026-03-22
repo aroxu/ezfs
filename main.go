@@ -52,8 +52,8 @@ func main() {
 		apiGroup.POST("/shares/:id/access", api.AccessShare)
 		apiGroup.GET("/shares/:id/download", api.DownloadShare)
 
-		// Admin routes
-		admin := apiGroup.Group("/admin")
+		// Private routes
+		admin := apiGroup.Group("/private")
 		admin.Use(api.AuthMiddleware())
 		{
 			admin.GET("/status", func(c *gin.Context) {
@@ -121,13 +121,25 @@ func serveEmbed(r *gin.Engine, publicFS fs.FS) {
 
 		content, err := fs.ReadFile(publicFS, path)
 		if err != nil {
-			// SPA fallback: if file doesn't exist, serve index.html
+			// SPA fallback: serve index.html for known SPA routes
 			content, err = fs.ReadFile(publicFS, "index.html")
 			if err != nil {
 				c.String(404, "Not Found")
 				return
 			}
-			path = "index.html"
+
+			// Determine status code: known SPA routes get 200, everything else 404
+			status := 404
+			spaRoutes := []string{"/", "/private", "/s/"}
+			for _, route := range spaRoutes {
+				if requestPath == route || strings.HasPrefix(requestPath, route) && route != "/" {
+					status = 200
+					break
+				}
+			}
+
+			c.Data(status, "text/html", content)
+			return
 		}
 
 		// Basic content-type detection

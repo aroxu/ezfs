@@ -7,7 +7,7 @@ import axios from "../utils/api";
 const AppNavbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const isDashboard = location.pathname === "/admin/dashboard";
+  const isDashboard = location.pathname.startsWith("/private");
 
   const handleLogout = async () => {
     try {
@@ -33,8 +33,8 @@ const AppNavbar = () => {
             Public
           </HeroLink>
         </NavbarItem>
-        <NavbarItem isActive={location.pathname.startsWith("/admin")}>
-          <HeroLink as={Link} color={location.pathname.startsWith("/admin") ? "primary" : "foreground"} to="/admin">
+        <NavbarItem isActive={location.pathname.startsWith("/private")}>
+          <HeroLink as={Link} color={location.pathname.startsWith("/private") ? "primary" : "foreground"} to="/private">
             Private
           </HeroLink>
         </NavbarItem>

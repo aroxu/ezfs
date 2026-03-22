@@ -161,7 +161,7 @@ func UpdateProfile(c *gin.Context) {
 func BrowserAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString, _ := c.Cookie("token")
-		redirectURL := "/admin?redirect=" + url.QueryEscape(c.Request.URL.RequestURI())
+		redirectURL := "/private?redirect=" + url.QueryEscape(c.Request.URL.RequestURI())
 
 		if tokenString == "" {
 			c.Redirect(http.StatusFound, redirectURL)

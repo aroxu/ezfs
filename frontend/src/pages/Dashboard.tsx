@@ -39,7 +39,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import axios from "../utils/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import PreviewModal from "../components/PreviewModal";
 import JSZip from "jszip";
 import { AnimatePresence, motion } from "framer-motion";
@@ -69,8 +69,13 @@ interface ShareUpdateData {
 }
 
 const Dashboard = () => {
+  const location = useLocation();
+  const basePath = "/private";
+  const currentPath = location.pathname.startsWith(basePath + "/")
+    ? location.pathname.slice(basePath.length + 1)
+    : "";
+  const setCurrentPath = (newPath: string) => navigate(newPath ? `${basePath}/${newPath}` : basePath);
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [currentPath, setCurrentPath] = useState("");
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [password, setPassword] = useState("");
@@ -108,24 +113,13 @@ const Dashboard = () => {
   const [editMaxAccess, setEditMaxAccess] = useState("");
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        await axios.get("/admin/status");
-      } catch {
-        navigate("/admin");
-      }
-    };
-    checkAuth();
-  }, [navigate]);
-
-  useEffect(() => {
     document.title = currentPath ? `ezfs - ${currentPath}` : "ezfs - Private";
   }, [currentPath]);
 
   const fetchFiles = async (path: string = "") => {
     setIsLoading(true);
     try {
-      const res = await axios.get(`/admin/files/private?path=${path}`);
+      const res = await axios.get(`/private/files/private?path=${path}`);
       setFiles(res.data || []);
     } catch (err) {
       console.error(err);
@@ -140,7 +134,7 @@ const Dashboard = () => {
     setZipStatus({ active: true, progress: 0, fileName: folder.name });
 
     const addFolderToZip = async (currentPath: string, zipFolder: JSZip) => {
-      const res = await axios.get(`/admin/files/private?path=${currentPath}`);
+      const res = await axios.get(`/private/files/private?path=${currentPath}`);
       const items: FileItem[] = res.data || [];
 
       for (const item of items) {
@@ -150,7 +144,7 @@ const Dashboard = () => {
             await addFolderToZip(item.path, newZipFolder);
           }
         } else {
-          const fileRes = await axios.get(`/admin/files/raw/${item.path}`, { responseType: "blob" });
+          const fileRes = await axios.get(`/private/files/raw/${item.path}`, { responseType: "blob" });
           zipFolder.file(item.name, fileRes.data);
         }
       }
@@ -180,7 +174,7 @@ const Dashboard = () => {
 
   const downloadFile = async (file: FileItem) => {
     const link = document.createElement("a");
-    link.href = `/api/admin/files/raw/${file.path}`;
+    link.href = `/api/private/files/raw/${file.path}`;
     link.download = file.name;
     document.body.appendChild(link);
     link.click();
@@ -194,7 +188,7 @@ const Dashboard = () => {
   const handleShare = async () => {
     if (!selectedFile) return;
     try {
-      const res = await axios.post("/admin/shares", {
+      const res = await axios.post("/private/shares", {
         file_path: selectedFile.path,
         is_folder: selectedFile.is_dir,
         password: password || undefined,
@@ -212,7 +206,7 @@ const Dashboard = () => {
   const fetchShares = async () => {
     setIsSharesLoading(true);
     try {
-      const res = await axios.get("/admin/shares");
+      const res = await axios.get("/private/shares");
       setShares(res.data || []);
     } catch (err) {
       console.error(err);
@@ -224,7 +218,7 @@ const Dashboard = () => {
   const deleteShare = async (id: string) => {
     if (!confirm("Are you sure you want to delete this share?")) return;
     try {
-      await axios.delete(`/admin/shares/${id}`);
+      await axios.delete(`/private/shares/${id}`);
       fetchShares();
     } catch (err) {
       console.error(err);
@@ -233,7 +227,7 @@ const Dashboard = () => {
 
   const updateShare = async (id: string, data: ShareUpdateData) => {
     try {
-      await axios.patch(`/admin/shares/${id}`, data);
+      await axios.patch(`/private/shares/${id}`, data);
       setEditingShare(null);
       fetchShares();
       onEditShareOpenChange();
@@ -246,7 +240,7 @@ const Dashboard = () => {
   const handleUpdateProfile = async () => {
     setIsUpdating(true);
     try {
-      await axios.post("/admin/profile", {
+      await axios.post("/private/profile", {
         username: newUsername,
         password: newPassword,
       });
@@ -274,14 +268,25 @@ const Dashboard = () => {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-start w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             <Lock className="text-primary" /> Private Dashboard
           </h1>
-          <p className="text-default-500">Manage your private storage and sharing links</p>
+          <p className="text-default-500 text-small sm:text-base">Manage your private storage and sharing links</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            color="primary"
+            variant="flat"
+            isIconOnly className="sm:hidden"
+            onPress={() => {
+              fetchShares();
+              onManageSharesOpen();
+            }}
+          >
+            <ShareIcon size={18} />
+          </Button>
           <Button
             color="primary"
             variant="flat"
@@ -290,28 +295,39 @@ const Dashboard = () => {
               fetchShares();
               onManageSharesOpen();
             }}
-            className="font-medium"
+            className="font-medium hidden sm:flex"
           >
             Manage Shares
           </Button>
           <Button
             color="default"
             variant="flat"
+            isIconOnly className="sm:hidden"
+            onPress={onProfileOpen}
+          >
+            <Settings size={18} />
+          </Button>
+          <Button
+            color="default"
+            variant="flat"
             startContent={<Settings size={18} />}
             onPress={onProfileOpen}
-            className="font-medium"
+            className="font-medium hidden sm:flex"
           >
-            Profile Settings
+            Account Settings
           </Button>
         </div>
       </div>
 
-      <Card className="bg-background/60 border border-divider shadow-sm" isBlurred>
-        <CardBody className="py-3 px-5">
+      <Card className="bg-background/60 border border-divider shadow-sm overflow-hidden" isBlurred>
+        <CardBody className="py-3 px-5 overflow-x-auto">
           <Breadcrumbs
+            maxItems={4}
+            itemsBeforeCollapse={1}
+            itemsAfterCollapse={2}
             separator={<ChevronRight size={14} />}
             itemClasses={{
-              item: "text-small font-medium data-[current=true]:text-primary",
+              item: "text-small font-medium data-[current=true]:text-primary whitespace-nowrap",
               separator: "text-default-400",
             }}
           >
@@ -327,9 +343,10 @@ const Dashboard = () => {
 
       <Table
         aria-label="Private files"
-        className="bg-background/40"
+        className="bg-background/40 w-full"
         removeWrapper
         classNames={{
+          table: "table-fixed w-full",
           th: "bg-transparent text-default-500 border-b border-divider",
           tr: "hover:bg-default-100/50 transition-colors group",
           td: "py-4",
@@ -337,7 +354,7 @@ const Dashboard = () => {
       >
         <TableHeader>
           <TableColumn>NAME</TableColumn>
-          <TableColumn width={150}>SIZE</TableColumn>
+          <TableColumn width={150} className="hidden sm:table-cell">SIZE</TableColumn>
           <TableColumn align="end" width={100}>
             ACTIONS
           </TableColumn>
@@ -346,44 +363,47 @@ const Dashboard = () => {
           {(files || []).map((file) => (
             <TableRow key={file.path}>
               <TableCell>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                   <div
-                    className={`p-2 rounded-lg ${file.is_dir ? "bg-secondary/10 text-secondary" : "bg-default-100 text-default-600"}`}
+                    className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${file.is_dir ? "bg-primary/10 text-primary" : "bg-default-100 text-default-600"}`}
                   >
-                    {file.is_dir ? <Folder size={20} /> : <FileIcon size={20} />}
+                    {file.is_dir ? <Folder size={18} className="sm:w-5 sm:h-5" /> : <FileIcon size={18} className="sm:w-5 sm:h-5" />}
                   </div>
-                  {file.is_dir ? (
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0">
+                    {file.is_dir ? (
                       <Button
                         variant="light"
-                        className="p-0 h-auto min-w-0 font-medium text-foreground hover:text-primary transition-colors bg-transparent text-base"
+                        className="p-0 h-auto min-w-0 max-w-full font-medium text-foreground hover:text-primary transition-colors bg-transparent text-sm sm:text-base"
                         onClick={() => setCurrentPath(file.path)}
                       >
-                        {file.name}
+                        <span className="truncate">{file.name}</span>
                       </Button>
+                    ) : file.name.match(/\.html?$/) ? (
+                      <Button
+                        variant="light"
+                        className="p-0 h-auto min-w-0 max-w-full font-medium text-foreground hover:text-primary transition-colors bg-transparent text-sm sm:text-base"
+                        onClick={() => window.location.href = `/raw/private/${file.path}`}
+                      >
+                        <span className="truncate">{file.name}</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="light"
+                        className="p-0 h-auto min-w-0 max-w-full font-medium text-foreground hover:text-primary transition-colors bg-transparent text-sm sm:text-base"
+                        onClick={() => downloadFile(file)}
+                      >
+                        <span className="truncate">{file.name}</span>
+                      </Button>
+                    )}
+                    <div className="sm:hidden text-tiny text-default-400 truncate">
+                      {file.is_dir ? "Folder" : formatSize(file.size)}
                     </div>
-                  ) : file.name.match(/\.html?$/) ? (
-                    <Button
-                      variant="light"
-                      className="p-0 h-auto min-w-0 font-medium text-foreground hover:text-primary transition-colors bg-transparent text-base"
-                      onClick={() => window.location.href = `/raw/private/${file.path}`}
-                    >
-                      {file.name}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="light"
-                      className="p-0 h-auto min-w-0 font-medium text-foreground hover:text-primary transition-colors bg-transparent text-base"
-                      onClick={() => downloadFile(file)}
-                    >
-                      {file.name}
-                    </Button>
-                  )}
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden sm:table-cell">
                 {file.is_dir ? (
-                  <Chip size="sm" variant="flat" color="secondary">
+                  <Chip size="sm" variant="flat">
                     Folder
                   </Chip>
                 ) : (
@@ -391,7 +411,7 @@ const Dashboard = () => {
                 )}
               </TableCell>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-end gap-1 sm:gap-2">
                   {file.is_dir ? (
                     <>
                       <Tooltip content="Download Folder (Zip)">
@@ -399,10 +419,10 @@ const Dashboard = () => {
                           isIconOnly
                           size="sm"
                           variant="flat"
-                          color="secondary"
+                          color="primary"
                           onClick={() => downloadFolder(file)}
                         >
-                          <Download size={18} />
+                          <Download size={16} className="sm:w-4.5 sm:h-4.5" />
                         </Button>
                       </Tooltip>
                       <Tooltip content="Share Folder Link">
@@ -418,7 +438,7 @@ const Dashboard = () => {
                             onShareOpen();
                           }}
                         >
-                          <ShareIcon size={18} />
+                          <ShareIcon size={16} className="sm:w-4.5 sm:h-4.5" />
                         </Button>
                       </Tooltip>
                     </>
@@ -429,19 +449,18 @@ const Dashboard = () => {
                           isIconOnly
                           size="sm"
                           variant="flat"
-                          color="secondary"
                           onPress={() => {
                             setPreviewFile(file);
                             onPreviewOpen();
                           }}
                         >
-                          <Eye size={18} />
+                          <Eye size={16} className="sm:w-4.5 sm:h-4.5" />
                         </Button>
                       </Tooltip>
 
                       <Tooltip content="Download">
                         <Button isIconOnly size="sm" variant="flat" color="success" onPress={() => downloadFile(file)}>
-                          <Download size={18} />
+                          <Download size={16} className="sm:w-4.5 sm:h-4.5" />
                         </Button>
                       </Tooltip>
 
@@ -458,7 +477,7 @@ const Dashboard = () => {
                             onShareOpen();
                           }}
                         >
-                          <ShareIcon size={18} />
+                          <ShareIcon size={16} className="sm:w-4.5 sm:h-4.5" />
                         </Button>
                       </Tooltip>
                     </>
@@ -549,9 +568,13 @@ const Dashboard = () => {
                 <Button variant="flat" onPress={onClose}>
                   Cancel
                 </Button>
-                {!shareLink && (
+                {!shareLink ? (
                   <Button color="primary" className="font-bold shadow-lg shadow-primary/20" onPress={handleShare}>
                     Generate Link
+                  </Button>
+                ) : (
+                  <Button color="primary" className="font-bold shadow-lg shadow-primary/20" onPress={onClose}>
+                    Done
                   </Button>
                 )}
               </ModalFooter>
@@ -564,7 +587,7 @@ const Dashboard = () => {
         isOpen={isPreviewOpen}
         onOpenChange={onPreviewOpenChange}
         file={previewFile}
-        baseRawUrl="/api/admin/files/raw"
+        baseRawUrl="/api/private/files/raw"
       />
 
       <Modal
@@ -582,7 +605,7 @@ const Dashboard = () => {
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
-                <span className="text-xl font-bold tracking-tight">Profile Settings</span>
+                <span className="text-xl font-bold tracking-tight">Account Settings</span>
               </ModalHeader>
               <ModalBody className="py-6 flex flex-col gap-6">
                 <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-center gap-4">
