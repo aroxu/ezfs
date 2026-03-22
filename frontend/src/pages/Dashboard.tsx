@@ -52,6 +52,22 @@ interface FileItem {
   size: number;
 }
 
+interface ShareItem {
+  id: string;
+  file_path: string;
+  is_folder: boolean;
+  expires_at: number;
+  max_access: number;
+  access_count: number;
+  created_at: number;
+}
+
+interface ShareUpdateData {
+  password?: string;
+  expires_at?: string | null;
+  max_access?: number;
+}
+
 const Dashboard = () => {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [currentPath, setCurrentPath] = useState("");
@@ -71,9 +87,9 @@ const Dashboard = () => {
   const [newPassword, setNewPassword] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const [shares, setShares] = useState<any[]>([]);
+  const [shares, setShares] = useState<ShareItem[]>([]);
   const [isSharesLoading, setIsSharesLoading] = useState(false);
-  const [editingShare, setEditingShare] = useState<any | null>(null);
+  const [editingShare, setEditingShare] = useState<ShareItem | null>(null);
 
   const { isOpen: isShareOpen, onOpen: onShareOpen, onOpenChange: onShareOpenChange } = useDisclosure();
   const { isOpen: isPreviewOpen, onOpen: onPreviewOpen, onOpenChange: onPreviewOpenChange } = useDisclosure();
@@ -215,7 +231,7 @@ const Dashboard = () => {
     }
   };
 
-  const updateShare = async (id: string, data: any) => {
+  const updateShare = async (id: string, data: ShareUpdateData) => {
     try {
       await axios.patch(`/admin/shares/${id}`, data);
       setEditingShare(null);
@@ -830,7 +846,7 @@ const Dashboard = () => {
                   color="warning"
                   className="font-bold shadow-lg shadow-warning/20"
                   onPress={() =>
-                    updateShare(editingShare?.id, {
+                    editingShare && updateShare(editingShare.id, {
                       password: editPassword || undefined,
                       expires_at: editExpiryAt ? new Date(editExpiryAt).toISOString() : null,
                       max_access: editMaxAccess ? parseInt(editMaxAccess) : 0,

@@ -1,6 +1,8 @@
 package db
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/glebarez/sqlite"
@@ -42,7 +44,13 @@ var DB *gorm.DB
 
 func InitDB() error {
 	var err error
-	DB, err = gorm.Open(sqlite.Open("ezfs.db"), &gorm.Config{})
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "ezfs.db"
+	} else {
+		os.MkdirAll(filepath.Dir(dbPath), 0755)
+	}
+	DB, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		return err
 	}

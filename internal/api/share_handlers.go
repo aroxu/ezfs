@@ -95,7 +95,7 @@ func GetShareInfo(c *gin.Context) {
 	})
 }
 
-func fetchShareAndCheck(c *gin.Context, id string, password string) (*db.Share, error) {
+func fetchShareAndCheck(_ *gin.Context, id string, password string) (*db.Share, error) {
 	var share db.Share
 	if err := db.DB.First(&share, "id = ?", id).Error; err != nil {
 		return nil, err

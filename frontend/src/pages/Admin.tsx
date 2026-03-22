@@ -4,6 +4,7 @@ import { login } from "../utils/api";
 import axios from "../utils/api";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, LogIn, AlertCircle } from "lucide-react";
+import { AxiosError } from "axios";
 
 const Admin = () => {
   const [username, setUsername] = useState("");
@@ -75,9 +76,10 @@ const Admin = () => {
     try {
       await login(username, password);
       navigate("/admin/dashboard");
-    } catch (err: any) {
-      const msg = err.response?.data?.error || "Login failed. Please check your credentials.";
-      const until = err.response?.data?.lock_until;
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string; lock_until?: number }>;
+      const msg = axiosErr.response?.data?.error || "Login failed. Please check your credentials.";
+      const until = axiosErr.response?.data?.lock_until;
 
       if (until) {
         setLockUntil(until);
@@ -90,7 +92,7 @@ const Admin = () => {
 
   return (
     <div className="flex justify-center items-center h-[70vh]">
-      <Card className="w-full max-w-[400px] bg-background/60 border border-divider shadow-2xl" isBlurred>
+      <Card className="w-full max-w-100 bg-background/60 border border-divider shadow-2xl" isBlurred>
         <CardHeader className="flex flex-col gap-1 p-6 items-center">
           <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-2">
             <Lock size={24} />

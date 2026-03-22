@@ -1,0 +1,11 @@
+.git
+data/
+frontend/node_modules/
+frontend/dist/
+ezfs.exe
+ezfs
+ezfs.db
+*.exe
+*.dll
+*.so
+*.dylib

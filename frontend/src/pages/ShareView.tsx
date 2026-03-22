@@ -30,7 +30,7 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import JSZip from "jszip";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -74,8 +74,9 @@ const ShareView = () => {
       if (!res.data.hasPassword) {
         setIsAuthorized(true);
       }
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Share not found or expired");
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setError(axiosErr.response?.data?.error || "Share not found or expired");
     } finally {
       setLoading(false);
     }
@@ -100,8 +101,9 @@ const ShareView = () => {
       try {
         const res = await axios.get(`/api/shares/${id}/list?p=${encodeURIComponent(password)}&path=${path}`);
         setContents(res.data);
-      } catch (err: any) {
-        setError(err.response?.data?.error || "Failed to list contents");
+      } catch (err) {
+        const axiosErr = err as AxiosError<{ error?: string }>;
+        setError(axiosErr.response?.data?.error || "Failed to list contents");
       } finally {
         setListLoading(false);
       }
@@ -120,8 +122,9 @@ const ShareView = () => {
       await axios.post(`/api/shares/${id}/access`, { password });
       setIsAuthorized(true);
       setError("");
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Access denied");
+    } catch (err) {
+      const axiosErr = err as AxiosError<{ error?: string }>;
+      setError(axiosErr.response?.data?.error || "Access denied");
     }
   };
 
@@ -224,7 +227,7 @@ const ShareView = () => {
   if (!isAuthorized) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
-        <Card className="w-full max-w-[420px] bg-background/60 border border-divider shadow-2xl" isBlurred>
+        <Card className="w-full max-w-105 bg-background/60 border border-divider shadow-2xl" isBlurred>
           <CardHeader className="flex flex-col gap-1 p-6 items-center">
             <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-4 shadow-inner">
               <Lock size={32} />
@@ -266,7 +269,7 @@ const ShareView = () => {
   const breadcrumbs = currentPath ? currentPath.split("/") : [];
 
   return (
-    <div className="max-w-[1200px] mx-auto p-6 md:p-12 animate-in fade-in duration-500">
+    <div className="max-w-300 mx-auto p-6 md:p-12 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-inner">
@@ -302,7 +305,7 @@ const ShareView = () => {
       </div>
 
       {!info?.isFolder ? (
-        <Card className="max-w-[500px] mx-auto bg-background/60 border border-divider shadow-2xl" isBlurred>
+        <Card className="max-w-125 mx-auto bg-background/60 border border-divider shadow-2xl" isBlurred>
           <CardBody className="p-12 flex flex-col items-center gap-8">
             <div className="p-10 bg-default-100/50 rounded-full border border-divider shadow-inner">
               <FileIcon size={64} className="text-default-500" />
@@ -423,7 +426,7 @@ const ShareView = () => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-8 right-8 z-[100] w-[320px]"
+            className="fixed bottom-8 right-8 z-100 w-[320px]"
           >
             <Card className="border-primary/20 shadow-2xl bg-background/80 backdrop-blur-2xl">
               <CardBody className="p-5 gap-4">

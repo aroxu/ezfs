@@ -22,7 +22,7 @@ const NotFound = () => {
         <div className="p-8 rounded-full bg-danger/10 border-2 border-danger/20 relative z-10">
           <FileQuestion size={80} className="text-danger animate-pulse" />
         </div>
-        <div className="absolute -inset-4 bg-danger/5 rounded-full blur-2xl -z-0" />
+        <div className="absolute -inset-4 bg-danger/5 rounded-full blur-2xl z-0" />
       </motion.div>
 
       <motion.div
