@@ -40,6 +40,40 @@ chmod +x build.sh
    go build -o ezfs.exe main.go
    ```
 
+## Docker
+
+### Docker Compose (Recommended)
+
+```bash
+docker compose up -d
+```
+
+See [docker-compose.yml](docker-compose.yml) for the full example.
+
+### Docker CLI
+
+```bash
+# Pull the image
+docker pull ghcr.io/aroxu/ezfs:main
+
+# Run
+docker run -d \
+  --name ezfs \
+  -p 8080:8080 \
+  -v ezfs-data:/app/data \
+  -e DB_PATH=/app/data/ezfs.db \
+  ghcr.io/aroxu/ezfs:main
+```
+
+### Build from Source
+
+```bash
+docker build -t ezfs .
+docker run -d -p 8080:8080 -v ezfs-data:/app/data ezfs
+```
+
+The `/app/data` volume persists the SQLite database and all files (`public/`, `private/`) across container restarts.
+
 ## Configuration
 
 - Default port: `8080`

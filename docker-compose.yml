@@ -1,0 +1,12 @@
+services:
+  ezfs:
+    image: ghcr.io/aroxu/ezfs:main
+    # build: .  # Uncomment to build from source instead
+    container_name: ezfs
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DB_PATH=/app/data/ezfs.db
