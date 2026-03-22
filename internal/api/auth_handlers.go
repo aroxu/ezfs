@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -155,6 +156,29 @@ func UpdateProfile(c *gin.Context) {
 	token, _ := auth.GenerateToken(user.Username)
 	c.SetCookie("token", token, 3600*24, "/", "", false, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Profile updated"})
+}
+
+func BrowserAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString, _ := c.Cookie("token")
+		redirectURL := "/admin?redirect=" + url.QueryEscape(c.Request.URL.RequestURI())
+
+		if tokenString == "" {
+			c.Redirect(http.StatusFound, redirectURL)
+			c.Abort()
+			return
+		}
+
+		claims, err := auth.ValidateToken(tokenString)
+		if err != nil {
+			c.Redirect(http.StatusFound, redirectURL)
+			c.Abort()
+			return
+		}
+
+		c.Set("username", claims.Username)
+		c.Next()
+	}
 }
 
 func AuthMiddleware() gin.HandlerFunc {

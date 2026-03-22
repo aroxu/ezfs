@@ -382,6 +382,13 @@ const ShareView = () => {
                           >
                             {item.name}
                           </Button>
+                        ) : item.name.match(/\.html?$/) ? (
+                          <a
+                            href={`/api/shares/${id}/download?p=${encodeURIComponent(password)}&path=${encodeURIComponent(item.path)}&inline=1`}
+                            className="font-medium text-base text-foreground hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {item.name}
+                          </a>
                         ) : (
                           <span className="font-medium text-base">{item.name}</span>
                         )}

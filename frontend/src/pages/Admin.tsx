@@ -2,7 +2,7 @@
 import { Card, CardBody, CardHeader, Input, Button, Divider } from "@heroui/react";
 import { login } from "../utils/api";
 import axios from "../utils/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, User, LogIn, AlertCircle } from "lucide-react";
 import { AxiosError } from "axios";
 
@@ -14,6 +14,8 @@ const Admin = () => {
   const [lockUntil, setLockUntil] = useState<number | null>(null);
   const [countDown, setCountDown] = useState<number | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -60,7 +62,11 @@ const Admin = () => {
     const checkAuth = async () => {
       try {
         await axios.get("/admin/status");
-        navigate("/admin/dashboard");
+        if (redirectTo) {
+          window.location.href = redirectTo;
+        } else {
+          navigate("/admin/dashboard");
+        }
       } catch {
         // Not logged in, stay here
       }
@@ -75,7 +81,11 @@ const Admin = () => {
     setIsLoading(true);
     try {
       await login(username, password);
-      navigate("/admin/dashboard");
+      if (redirectTo) {
+        window.location.href = redirectTo;
+      } else {
+        navigate("/admin/dashboard");
+      }
     } catch (err) {
       const axiosErr = err as AxiosError<{ error?: string; lock_until?: number }>;
       const msg = axiosErr.response?.data?.error || "Login failed. Please check your credentials.";

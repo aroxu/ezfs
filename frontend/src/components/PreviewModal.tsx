@@ -11,10 +11,10 @@ interface PreviewModalProps {
     name: string;
     path: string;
   } | null;
-  baseRawUrl?: string; // e.g. "/raw/public" or "/api/files/raw"
+  baseRawUrl?: string; // e.g. "" (public root) or "/api/admin/files/raw"
 }
 
-const PreviewModal = ({ isOpen, onOpenChange, file, baseRawUrl = "/raw/public" }: PreviewModalProps) => {
+const PreviewModal = ({ isOpen, onOpenChange, file, baseRawUrl = "" }: PreviewModalProps) => {
   const [mdContent, setMdContent] = useState("");
 
   useEffect(() => {
@@ -82,7 +82,7 @@ const PreviewModal = ({ isOpen, onOpenChange, file, baseRawUrl = "/raw/public" }
                 {isMarkdown && (
                   <div className="w-full h-full overflow-hidden flex flex-col">
                     <ScrollShadow className="flex-1 w-full">
-                      <div className="prose dark:prose-invert max-w-[1200px] w-full p-8 bg-default-50/50 rounded-2xl border border-divider shadow-inner mx-auto">
+                      <div className="prose dark:prose-invert max-w-300 w-full p-8 bg-default-50/50 rounded-2xl border border-divider shadow-inner mx-auto">
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{mdContent}</ReactMarkdown>
                       </div>
                     </ScrollShadow>

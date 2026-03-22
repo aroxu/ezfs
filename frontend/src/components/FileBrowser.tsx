@@ -72,7 +72,7 @@ const FileBrowser = () => {
             await addFolderToZip(item.path, newZipFolder);
           }
         } else {
-          const fileRes = await fetch(`/raw/public/${item.path}`);
+          const fileRes = await fetch(`/${item.path}`);
           const blob = await fileRes.blob();
           zipFolder.file(item.name, blob);
         }
@@ -178,15 +178,21 @@ const FileBrowser = () => {
                         {file.name}
                       </Link>
                     </div>
+                  ) : file.name.match(/\.html?$/) ? (
+                    <a
+                      href={`/${file.path}`}
+                      className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
+                    >
+                      {file.name}
+                    </a>
                   ) : (
-                    <Link
-                      href={`/raw/public/${file.path}`}
-                      target="_blank"
+                    <a
+                      href={`/${file.path}`}
                       download
                       className="font-medium text-foreground hover:text-primary transition-colors cursor-pointer"
                     >
                       {file.name}
-                    </Link>
+                    </a>
                   )}
                 </div>
               </TableCell>
@@ -220,8 +226,8 @@ const FileBrowser = () => {
                           size="sm"
                           variant="flat"
                           as="a"
-                          href={`/raw/public/` + file.path}
-                          target="_blank"
+                          href={`/${file.path}`}
+                          download
                         >
                           <Download size={18} />
                         </Button>

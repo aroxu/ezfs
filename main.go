@@ -27,6 +27,10 @@ func main() {
 	os.MkdirAll(filepath.Join("data", "public"), 0755)
 	os.MkdirAll(filepath.Join("data", "private"), 0755)
 
+	if os.Getenv("GIN_MODE") == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 	r.RedirectTrailingSlash = false
@@ -68,6 +72,11 @@ func main() {
 	// Serve physical files
 	r.StaticFS("/raw/public", http.Dir(filepath.Join("data", "public")))
 
+	// Serve private files inline (auth required, no Content-Disposition: attachment)
+	raw := r.Group("/raw/private")
+	raw.Use(api.BrowserAuthMiddleware())
+	raw.GET("/*filepath", api.ServePrivateFile)
+
 	// Serve Static Files using embedding
 	// Extract the dist folder from the embedded FS
 	publicFS, err := fs.Sub(frontendAssets, "frontend/dist")
@@ -87,20 +96,25 @@ func serveEmbed(r *gin.Engine, publicFS fs.FS) {
 			return
 		}
 
-		path := strings.TrimPrefix(c.Request.URL.Path, "/")
+		requestPath := c.Request.URL.Path
+		path := strings.TrimPrefix(requestPath, "/")
 		if path == "" {
 			path = "index.html"
 		}
 
-		// Try to serve from physical public folder first (hotlink)
-		// We skip index.html to serve the SPA version
-		if path != "index.html" {
+		// Try to serve from physical public folder first.
+		// Skip only when the user navigates to "/" (root) so the SPA loads.
+		// Explicit requests like "/index.html" should check data/public first.
+		if path != "index.html" || requestPath == "/index.html" {
 			physicalPath := filepath.Join("data", "public", filepath.Clean(path))
-			// Ensure it's within data/public
 			if rel, err := filepath.Rel(filepath.Join("data", "public"), physicalPath); err == nil && !strings.HasPrefix(rel, "..") {
 				if info, err := os.Stat(physicalPath); err == nil && !info.IsDir() {
-					c.File(physicalPath)
-					return
+					f, fErr := os.Open(physicalPath)
+					if fErr == nil {
+						defer f.Close()
+						http.ServeContent(c.Writer, c.Request, filepath.Base(physicalPath), info.ModTime(), f)
+						return
+					}
 				}
 			}
 		}

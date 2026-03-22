@@ -238,10 +238,20 @@ func DownloadShare(c *gin.Context) {
 
 	filename := filepath.Base(fullPath)
 	encodedName := url.PathEscape(filename)
-	// Stronger Content-Disposition header with fallback for better browser compatibility
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"; filename*=UTF-8''%s", filename, encodedName))
+	disposition := "attachment"
+	if c.Query("inline") == "1" {
+		disposition = "inline"
+	}
+	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"; filename*=UTF-8''%s", disposition, filename, encodedName))
 
-	c.File(fullPath)
+	f, err := os.Open(fullPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer f.Close()
+	fInfo, _ := f.Stat()
+	http.ServeContent(c.Writer, c.Request, filename, fInfo.ModTime(), f)
 }
 
 func ListShares(c *gin.Context) {

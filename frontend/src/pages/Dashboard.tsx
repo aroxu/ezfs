@@ -362,6 +362,14 @@ const Dashboard = () => {
                         {file.name}
                       </Button>
                     </div>
+                  ) : file.name.match(/\.html?$/) ? (
+                    <Button
+                      variant="light"
+                      className="p-0 h-auto min-w-0 font-medium text-foreground hover:text-primary transition-colors bg-transparent text-base"
+                      onClick={() => window.location.href = `/raw/private/${file.path}`}
+                    >
+                      {file.name}
+                    </Button>
                   ) : (
                     <Button
                       variant="light"

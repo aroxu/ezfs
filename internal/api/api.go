@@ -1,7 +1,9 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,7 +44,51 @@ func GetPrivateFile(c *gin.Context) {
 		return
 	}
 
-	c.FileAttachment(targetPath, filepath.Base(targetPath))
+	filename := filepath.Base(targetPath)
+	encodedName := url.PathEscape(filename)
+	disposition := "attachment"
+	if c.Query("inline") == "1" {
+		disposition = "inline"
+	}
+	c.Header("Content-Disposition", fmt.Sprintf("%s; filename=\"%s\"; filename*=UTF-8''%s", disposition, filename, encodedName))
+
+	// Use http.ServeContent instead of c.File to avoid Go's
+	// automatic 301 redirect for index.html files.
+	f, err := os.Open(targetPath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open file"})
+		return
+	}
+	defer f.Close()
+	stat, _ := f.Stat()
+	http.ServeContent(c.Writer, c.Request, filename, stat.ModTime(), f)
+}
+
+func ServePrivateFile(c *gin.Context) {
+	subPath := c.Param("filepath")
+	subPath = strings.TrimPrefix(subPath, "/")
+	rootPath, _ := filepath.Abs(filepath.Join("data", "private"))
+	targetPath, _ := filepath.Abs(filepath.Join(rootPath, filepath.Clean(subPath)))
+
+	if !strings.HasPrefix(targetPath, rootPath) {
+		c.Redirect(http.StatusFound, "/404")
+		return
+	}
+
+	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
+		c.Redirect(http.StatusFound, "/404")
+		return
+	}
+
+	filename := filepath.Base(targetPath)
+	f, err := os.Open(targetPath)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to open file")
+		return
+	}
+	defer f.Close()
+	stat, _ := f.Stat()
+	http.ServeContent(c.Writer, c.Request, filename, stat.ModTime(), f)
 }
 
 func listFiles(c *gin.Context, folder string) {
